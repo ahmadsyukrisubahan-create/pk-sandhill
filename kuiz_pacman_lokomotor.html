@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuiz Pac-Man: Lokomotor & Bukan Lokomotor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Lexend:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Lexend', 'Fredoka', sans-serif;
+            background-color: #0d1117;
+            color: #ffffff;
+            touch-action: none; /* Prevent browser pull-to-refresh / zoom when swiping */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-mbpk {
+            font-family: 'Fredoka', cursive, sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        /* Pulse and Animations */
+        @keyframes yellowGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.6); }
+            50% { box-shadow: 0 0 30px rgba(234, 179, 8, 0.9); }
+        }
+
+        .glow-yellow {
+            animation: yellowGlow 2s infinite;
+        }
+
+        .btn-touch {
+            transition: transform 0.1s active, background-color 0.1s;
+        }
+        .btn-touch:active {
+            transform: scale(0.92);
+        }
+
+        /* SVG Character float animation */
+        @keyframes charFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-char {
+            animation: charFloat 2.5s ease-in-out infinite;
+        }
+
+        /* Game Board Container */
+        #game-container {
+            position: relative;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        canvas {
+            background-color: #000000;
+            border: 4px solid #2563eb;
+            border-radius: 16px;
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Large touch targets for Special Education students */
+        .large-btn {
+            font-size: 1.5rem;
+            padding: 0.875rem 1.5rem;
+            border-radius: 1rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 text-gray-100">
+
+    <header class="w-full max-w-xl text-center my-2">
+        <h1 class="text-2xl sm:text-4xl font-extrabold text-yellow-400 tracking-wide font-mbpk drop-shadow-md">
+            <i class="fa-solid-sharp fa-ghost text-red-500 mr-2"></i>LOKOMOTOR & BUKAN LOKOMOTOR
+        </h1>
+        <p class="text-sm sm:text-lg text-cyan-300 font-semibold mt-1">
+            Makan ceri 🍒 dan elak hantu 👻 untuk jawab soalan!
+        </p>
+    </header>
+
+    <main class="w-full max-w-md my-auto flex flex-col items-center">
+        <div id="screen-start" class="w-full bg-gray-800 border-4 border-yellow-400 rounded-2xl p-6 shadow-2xl text-center space-y-6">
+            <div class="space-y-2">
+                <div class="text-5xl my-3">🏃‍♂️ 🧘‍♀️</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white font-mbpk">Sedia Untuk Bermain?</h2>
+                <p class="text-lg text-gray-300">Sila tulis nama kamu di bawah:</p>
+            </div>
+
+            <div class="space-y-4">
+                <input type="text" id="player-name-input" 
+                    placeholder="NAMA MURID..." 
+                    class="w-full text-center text-xl sm:text-2xl font-bold py-3 px-4 rounded-xl bg-gray-900 border-4 border-cyan-400 text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-yellow-400 uppercase font-mbpk"
+                    maxlength="20" autofocus />
+                
+                <div id="name-error" class="text-red-400 font-bold text-lg hidden">
+                    ⚠️ Sila masukkan nama dahulu!
+                </div>
+
+                <button onclick="startGame()" 
+                    class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-gray-900 large-btn font-mbpk shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-3 border-2 border-yellow-200">
+                    <i class="fa-solid fa-play text-2xl"></i> MULA MAIN!
+                </button>
+            </div>
+
+            <!-- Instructions Box for MBPK -->
+            <div class="bg-gray-900/80 rounded-xl p-4 text-left border border-gray-700 text-sm sm:text-base space-y-2 text-cyan-200">
+                <p class="font-bold text-yellow-400 text-center text-lg">💡 Cara Bermain:</p>
+                <p>1. Gerakkan Pac-Man guna butang panah.</p>
+                <p>2. Makan <b>5 Buah Ceri 🍒</b> untuk buka soalan!</p>
+                <p>3. Awas! Jangan kena tangkap <b>2 Hantu 👻</b>!</p>
+                <p>4. Jawab soalan dengan betul untuk markah penuh!</p>
+            </div>
+        </div>
+
+        <div id="screen-game" class="w-full hidden flex-col items-center">
+            <!-- Top Status Bar -->
+            <div class="w-full max-w-[500px] flex justify-between items-center bg-gray-800 px-4 py-2 rounded-xl border-2 border-blue-500 mb-2 font-mbpk">
+                <div class="text-base sm:text-xl font-bold text-cyan-300">
+                    👤 <span id="display-player-name" class="text-yellow-400">---</span>
+                </div>
+                <div class="text-base sm:text-xl font-bold text-emerald-400">
+                    🏆 Markah: <span id="display-score" class="text-white">0</span>
+                </div>
+                <div class="text-base sm:text-xl font-bold text-purple-300">
+                    🍒 Ceri: <span id="display-cherries" class="text-yellow-400">5</span>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div id="game-container" class="w-full touch-none select-none">
+                <canvas id="pacmanCanvas" width="450" height="450"></canvas>
+            </div>
+
+            <p class="text-xs sm:text-sm text-cyan-300 mt-3 text-center font-bold">
+                📱 Telefon/Tablet: Leret jari (Swipe) atau guna butang anak panah di bawah.<br>
+                💻 Komputer: Guna butang anak panah (Arrow Keys).
+            </p>
+
+            <!-- Mobile Controls D-PAD -->
+            <div class="w-full max-w-[320px] mt-2 grid grid-cols-3 gap-2 justify-items-center sm:hidden">
+                <div></div>
+                <button onclick="handleDpad('UP')" class="btn-touch w-16 h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl text-3xl font-bold text-white shadow-lg border-2 border-blue-300 flex items-center justify-center active:bg-yellow-500">
+                    ⬆️
+                </button>
+                <div></div>
+
+                <button onclick="handleDpad('LEFT')" class="btn-touch w-16 h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl text-3xl font-bold text-white shadow-lg border-2 border-blue-300 flex items-center justify-center active:bg-yellow-500">
+                    ⬅️
+                </button>
+                <button onclick="handleDpad('DOWN')" class="btn-touch w-16 h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl text-3xl font-bold text-white shadow-lg border-2 border-blue-300 flex items-center justify-center active:bg-yellow-500">
+                    ⬇️
+                </button>
+                <button onclick="handleDpad('RIGHT')" class="btn-touch w-16 h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl text-3xl font-bold text-white shadow-lg border-2 border-blue-300 flex items-center justify-center active:bg-yellow-500">
+                    ➡️
+                </button>
+            </div>
+        </div>
+
+        <div id="screen-end" class="w-full bg-gray-800 border-4 border-emerald-400 rounded-2xl p-6 shadow-2xl text-center space-y-6 hidden">
+            <div class="text-6xl animate-bounce">🎉</div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-yellow-400 font-mbpk">SYABAS & TAHNIAH!</h2>
+            
+            <div class="bg-gray-900 border-2 border-gray-700 rounded-2xl p-5 space-y-3">
+                <p class="text-xl text-gray-300 font-semibold">Nama Murid:</p>
+                <p id="end-player-name" class="text-2xl sm:text-3xl font-extrabold text-cyan-300 font-mbpk uppercase">---</p>
+                
+                <hr class="border-gray-700 my-2">
+
+                <p class="text-xl text-gray-300 font-semibold">Markah Keseluruhan:</p>
+                <div class="text-5xl sm:text-6xl font-black text-emerald-400 font-mbpk tracking-wider">
+                    <span id="end-player-score">0</span> / 10
+                </div>
+            </div>
+
+            <button onclick="restartGame()" 
+                class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white large-btn font-mbpk shadow-lg transform active:scale-95 transition-all border-2 border-emerald-300 flex items-center justify-center gap-3">
+                <i class="fa-solid fa-rotate-right text-2xl"></i> MAIN LAGI
+            </button>
+        </div>
+    </main>
+
+    <div id="question-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 z-50 hidden">
+        <div class="bg-gray-800 border-4 border-yellow-400 rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col items-center space-y-4 max-h-[95vh] overflow-y-auto">
+            
+            <!-- Question Badge -->
+            <div class="bg-yellow-400 text-gray-900 px-4 py-1.5 rounded-full font-black text-lg sm:text-xl font-mbpk shadow-md">
+                SOALAN <span id="q-number">1</span> DARI 5
+            </div>
+
+            <!-- Action Prompt -->
+            <h3 class="text-xl sm:text-2xl font-bold text-center text-white font-mbpk">
+                Apakah jenis pergerakan dalam gambar di bawah?
+            </h3>
+
+            <!-- Dynamic Motion Name Badge -->
+            <div id="q-motion-title" class="bg-cyan-600 text-white font-extrabold text-2xl sm:text-3xl px-6 py-2 rounded-2xl border-2 border-cyan-300 shadow-lg tracking-widest font-mbpk">
+                BERJALAN
+            </div>
+
+            <!-- SVG Illustration Container -->
+            <div id="q-image-container" class="w-full max-w-[260px] h-[190px] bg-gray-900 border-4 border-gray-700 rounded-2xl flex items-center justify-center p-2 shadow-inner">
+                <!-- SVG injected via JS -->
+            </div>
+
+            <!-- Alert / Feedback Area -->
+            <div id="q-feedback" class="w-full text-center text-lg sm:text-xl font-bold min-h-[32px] font-mbpk rounded-xl py-1">
+                <!-- Feedback text appears here -->
+            </div>
+
+            <!-- Choice Buttons -->
+            <div class="w-full grid grid-cols-1 gap-3 sm:gap-4 font-mbpk">
+                <button onclick="checkAnswer('LOKOMOTOR')" id="btn-lokomotor" 
+                    class="btn-touch w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl sm:text-3xl font-extrabold py-4 px-4 rounded-2xl border-4 border-blue-300 shadow-xl flex items-center justify-center gap-3">
+                    🏃‍♂️ LOKOMOTOR
+                </button>
+                <button onclick="checkAnswer('BUKAN LOKOMOTOR')" id="btn-bukan-lokomotor" 
+                    class="btn-touch w-full bg-purple-600 hover:bg-purple-500 text-white text-2xl sm:text-3xl font-extrabold py-4 px-4 rounded-2xl border-4 border-purple-300 shadow-xl flex items-center justify-center gap-3">
+                    🧘‍♀️ BUKAN LOKOMOTOR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="w-full text-center py-2 text-xs sm:text-sm text-gray-400 font-semibold">
+        Aplikasi Kuiz Interaktif MBPK • Pendidikan Jasmani & Kesehatan
+    </footer>
+
+    <script>
+        let playerName = "";
+        let score = 0;
+        let cherriesRemaining = 5;
+        let currentQuestionIndex = 0;
+        let questionAttempt = 1; // 1 for 1st attempt (2pts), 2 for 2nd attempt (1pt)
+        let isQuestionActive = false;
+
+        // Vector graphics illustrations with full character detail (no stickmen) for MBPK students
+        const questionsData = [
+            {
+                id: 1,
+                action: "BERJALAN",
+                answer: "LOKOMOTOR",
+                svg: `<svg viewBox="0 0 200 200" class="w-full h-full animate-char">
+                    <rect width="200" height="200" fill="#0f172a" rx="16"/>
+                    <!-- Ground/Track -->
+                    <rect x="10" y="165" width="180" height="20" fill="#334155" rx="5"/>
+                    <line x1="20" y1="175" x2="180" y2="175" stroke="#facc15" stroke-width="3" stroke-dasharray="10 8"/>
+                    
+                    <!-- Character Group: Walking Boy -->
+                    <g transform="translate(10, 0)">
+                        <!-- Back Arm -->
+                        <path d="M 95 85 L 120 110" stroke="#f43f5e" stroke-width="12" stroke-linecap="round"/>
+                        <circle cx="120" cy="110" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Back Leg -->
+                        <path d="M 95 125 L 75 165" stroke="#1e40af" stroke-width="14" stroke-linecap="round"/>
+                        <ellipse cx="70" cy="167" rx="12" ry="6" fill="#ef4444"/>
+                        
+                        <!-- Front Leg -->
+                        <path d="M 100 125 L 125 165" stroke="#2563eb" stroke-width="14" stroke-linecap="round"/>
+                        <ellipse cx="132" cy="167" rx="12" ry="6" fill="#ef4444"/>
+                        
+                        <!-- Torso / Shirt -->
+                        <path d="M 82 80 C 82 75, 115 75, 115 80 L 110 130 C 110 132, 85 132, 85 130 Z" fill="#38bdf8"/>
+                        
+                        <!-- Front Arm -->
+                        <path d="M 92 85 L 70 110" stroke="#fb7185" stroke-width="12" stroke-linecap="round"/>
+                        <circle cx="70" cy="110" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Head & Hair -->
+                        <circle cx="97" cy="50" r="22" fill="#ffedd5"/>
+                        <!-- Hair -->
+                        <path d="M 75 50 C 75 25, 120 25, 120 50 C 115 42, 105 40, 97 42 C 88 40, 80 44, 75 50 Z" fill="#471505"/>
+                        <!-- Eyes -->
+                        <circle cx="104" cy="48" r="3" fill="#000"/>
+                        <!-- Smile -->
+                        <path d="M 98 56 Q 104 62 110 56" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <!-- Cheeks -->
+                        <circle cx="98" cy="54" r="3" fill="#f43f5e" opacity="0.4"/>
+                    </g>
+                    
+                    <!-- Motion Arrow -->
+                    <path d="M 145 100 L 175 100 M 165 90 L 175 100 L 165 110" stroke="#4ade80" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>`
+            },
+            {
+                id: 2,
+                action: "LARI",
+                answer: "LOKOMOTOR",
+                svg: `<svg viewBox="0 0 200 200" class="w-full h-full animate-char">
+                    <rect width="200" height="200" fill="#0f172a" rx="16"/>
+                    <!-- Speed Lines -->
+                    <path d="M 15 60 L 50 60 M 10 90 L 40 90 M 20 120 L 55 120 M 15 150 L 45 150" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                    
+                    <!-- Running Boy -->
+                    <g transform="translate(15, -5)">
+                        <!-- Back Arm -->
+                        <path d="M 105 80 L 135 70 L 145 50" stroke="#f43f5e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="145" cy="50" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Back Leg -->
+                        <path d="M 95 120 L 60 135 L 35 125" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="32" cy="125" rx="12" ry="6" fill="#facc15"/>
+                        
+                        <!-- Front Leg -->
+                        <path d="M 95 120 L 135 140 L 160 160" stroke="#2563eb" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="164" cy="163" rx="12" ry="6" fill="#facc15"/>
+                        
+                        <!-- Torso (Leaning) -->
+                        <path d="M 85 75 L 120 70 L 105 125 L 75 120 Z" fill="#ef4444"/>
+                        
+                        <!-- Front Arm -->
+                        <path d="M 90 80 L 60 95 L 45 115" stroke="#fb7185" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="45" cy="115" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Head -->
+                        <circle cx="112" cy="45" r="21" fill="#ffedd5"/>
+                        <!-- Cap -->
+                        <path d="M 90 42 C 90 22, 130 22, 130 42 Z" fill="#38bdf8"/>
+                        <path d="M 115 40 L 140 43" stroke="#38bdf8" stroke-width="6" stroke-linecap="round"/>
+                        <!-- Face -->
+                        <circle cx="120" cy="44" r="3" fill="#000"/>
+                        <path d="M 114 52 Q 120 57 126 51" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                    </g>
+                </svg>`
+            },
+            {
+                id: 3,
+                action: "MELOMPAT",
+                answer: "BUKAN LOKOMOTOR",
+                svg: `<svg viewBox="0 0 200 200" class="w-full h-full animate-char">
+                    <rect width="200" height="200" fill="#0f172a" rx="16"/>
+                    <!-- Spring / Jump visual effect underneath -->
+                    <path d="M 80 170 C 80 160, 120 160, 120 170 C 120 180, 80 180, 80 190" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" fill="none"/>
+                    <path d="M 70 145 L 100 120 L 130 145 M 85 155 L 100 140 L 115 155" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+                    <!-- Jumping Girl Character -->
+                    <g transform="translate(0, -10)">
+                        <!-- Raised Arm Left -->
+                        <path d="M 90 80 L 60 50 L 50 30" stroke="#fb7185" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="50" cy="30" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Raised Arm Right -->
+                        <path d="M 110 80 L 140 50 L 150 30" stroke="#fb7185" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="150" cy="30" r="7" fill="#ffedd5"/>
+                        
+                        <!-- Legs Bent for Jump -->
+                        <path d="M 92 120 L 75 140 L 88 158" stroke="#a855f7" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="90" cy="162" rx="10" ry="6" fill="#38bdf8"/>
+                        
+                        <path d="M 108 120 L 125 140 L 112 158" stroke="#a855f7" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="110" cy="162" rx="10" ry="6" fill="#38bdf8"/>
+                        
+                        <!-- Dress / Torso -->
+                        <path d="M 88 75 C 88 70, 112 70, 112 75 L 125 122 C 125 125, 75 125, 75 122 Z" fill="#ec4899"/>
+                        
+                        <!-- Head & Hijab / Hair -->
+                        <circle cx="100" cy="48" r="21" fill="#ffedd5"/>
+                        <path d="M 78 48 C 78 20, 122 20, 122 48 C 122 68, 78 68, 78 48 Z" fill="#f43f5e"/>
+                        <circle cx="100" cy="50" r="16" fill="#ffedd5"/>
+                        <!-- Eyes & Smile -->
+                        <circle cx="94" cy="48" r="2.5" fill="#000"/>
+                        <circle cx="106" cy="48" r="2.5" fill="#000"/>
+                        <path d="M 95 55 Q 100 62 105 55" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <circle cx="91" cy="53" r="3" fill="#f43f5e" opacity="0.5"/>
+                        <circle cx="109" cy="53" r="3" fill="#f43f5e" opacity="0.5"/>
+                    </g>
+                </svg>`
+            },
+            {
+                id: 4,
+                action: "DUDUK",
+                answer: "BUKAN LOKOMOTOR",
+                svg: `<svg viewBox="0 0 200 200" class="w-full h-full animate-char">
+                    <rect width="200" height="200" fill="#0f172a" rx="16"/>
+                    <!-- Chair Structure -->
+                    <path d="M 135 75 L 135 130 L 70 130 L 70 178 M 135 130 L 135 178 M 125 75 L 125 130" stroke="#f97316" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    
+                    <!-- Sitting Boy Character -->
+                    <g transform="translate(5, 5)">
+                        <!-- Torso -->
+                        <path d="M 90 65 L 115 65 L 115 125 L 85 125 Z" fill="#10b981"/>
+                        
+                        <!-- Arm Resting on Lap -->
+                        <path d="M 95 75 L 120 95 L 130 95" stroke="#6ee7b7" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="132" cy="95" r="6" fill="#ffedd5"/>
+                        
+                        <!-- Sitting Leg (Thigh & Lower Leg) -->
+                        <path d="M 100 125 L 140 125 L 140 170" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="143" cy="172" rx="12" ry="6" fill="#ef4444"/>
+                        
+                        <!-- Head -->
+                        <circle cx="98" cy="40" r="20" fill="#ffedd5"/>
+                        <!-- Hair -->
+                        <path d="M 78 40 C 78 18, 118 18, 118 40 C 112 33, 102 30, 95 32 C 87 30, 82 34, 78 40 Z" fill="#471505"/>
+                        <!-- Eyes & Smile -->
+                        <circle cx="106" cy="40" r="3" fill="#000"/>
+                        <path d="M 100 47 Q 106 52 112 47" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                    </g>
+                    
+                    <!-- "NO MOVEMENT / STAY" Symbol -->
+                    <circle cx="160" cy="45" r="20" stroke="#ef4444" stroke-width="5" fill="#0f172a"/>
+                    <line x1="146" y1="31" x2="174" y2="59" stroke="#ef4444" stroke-width="5"/>
+                </svg>`
+            },
+            {
+                id: 5,
+                action: "MERANGKAK",
+                answer: "LOKOMOTOR",
+                svg: `<svg viewBox="0 0 200 200" class="w-full h-full animate-char">
+                    <rect width="200" height="200" fill="#0f172a" rx="16"/>
+                    <!-- Floor / Ground Line -->
+                    <line x1="15" y1="165" x2="185" y2="165" stroke="#64748b" stroke-width="6" stroke-linecap="round"/>
+                    
+                    <!-- Crawling Girl Character -->
+                    <g transform="translate(0, 10)">
+                        <!-- Back Arm on ground -->
+                        <path d="M 70 100 L 55 130 L 45 155" stroke="#fb7185" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="45" cy="157" r="6" fill="#ffedd5"/>
+                        
+                        <!-- Back Leg on ground -->
+                        <path d="M 120 110 L 140 135 L 160 155" stroke="#8b5cf6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="162" cy="157" rx="9" ry="6" fill="#facc15"/>
+                        
+                        <!-- Horizontal Torso -->
+                        <path d="M 65 90 C 65 90, 125 90, 125 105 L 120 120 L 65 115 Z" fill="#ec4899"/>
+                        
+                        <!-- Front Arm reaching forward -->
+                        <path d="M 75 100 L 95 130 L 115 155" stroke="#f43f5e" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="115" cy="157" r="6" fill="#ffedd5"/>
+                        
+                        <!-- Front Knee crawling -->
+                        <path d="M 115 110 L 95 135 L 80 155" stroke="#7c3aed" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <ellipse cx="78" cy="157" rx="9" ry="6" fill="#facc15"/>
+                        
+                        <!-- Head looking right -->
+                        <circle cx="50" cy="75" r="19" fill="#ffedd5"/>
+                        <!-- Hair -->
+                        <path d="M 31 75 C 31 52, 70 52, 70 75 C 65 67, 55 64, 48 66 C 40 64, 35 68, 31 75 Z" fill="#471505"/>
+                        <!-- Eye looking forward -->
+                        <circle cx="57" cy="74" r="3" fill="#000"/>
+                        <path d="M 52 82 Q 58 87 63 82" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                    </g>
+                    
+                    <!-- Forward Arrow -->
+                    <path d="M 135 70 L 170 70 M 158 60 L 170 70 L 158 80" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>`
+            }
+        ];
+
+        const canvas = document.getElementById("pacmanCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridRows = 15;
+        const gridCols = 15;
+        const tileSize = canvas.width / gridCols; // 30px per tile
+
+        // Open and Accessible 15x15 Maze Layout: 1=Wall, 0=Path
+        // Designed to ensure all corridors are open and accessible with no dead traps
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,0,1,1,1,0,1,1,1,0,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+            [1,1,1,0,1,0,1,0,1,0,1,0,1,1,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+            [1,1,1,0,1,0,1,0,1,0,1,0,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,0,1,1,1,0,1,1,1,0,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Pacman Position & Direction
+        let pacman = {
+            x: 1,
+            y: 1,
+            dirX: 0,
+            dirY: 0,
+            nextDirX: 0,
+            nextDirY: 0,
+            mouthAngle: 0.2,
+            mouthSpeed: 0.03
+        };
+
+        // Exactly 2 Ghost Enemies that move super slowly
+        let ghosts = [
+            { id: 0, x: 13, y: 1, color: "#ef4444", dirX: 0, dirY: 1 },
+            { id: 1, x: 1, y: 13, color: "#06b6d4", dirX: 1, dirY: 0 }
+        ];
+
+        // 5 Cherries placed in completely open, accessible paths (map value 0)
+        let cherries = [
+            { id: 0, x: 13, y: 1, eaten: false },  // Top right open corner
+            { id: 1, x: 1, y: 13, eaten: false },  // Bottom left open corner
+            { id: 2, x: 13, y: 13, eaten: false }, // Bottom right open corner
+            { id: 3, x: 7, y: 7, eaten: false },   // Center open path
+            { id: 4, x: 7, y: 1, eaten: false }    // Top middle open path
+        ];
+
+        let animationFrameId = null;
+
+        // Touch Swipe Detection for Smartphones/Tablets
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const gameContainer = document.getElementById("game-container");
+
+        gameContainer.addEventListener("touchstart", (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        gameContainer.addEventListener("touchend", (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            if (isQuestionActive) return;
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const minSwipeDistance = 25; // Threshold for intentional swipe
+
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal Swipe
+                if (Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX > 0) {
+                        setPacmanDirection(1, 0); // Swipe Right
+                    } else {
+                        setPacmanDirection(-1, 0); // Swipe Left
+                    }
+                }
+            } else {
+                // Vertical Swipe
+                if (Math.abs(deltaY) > minSwipeDistance) {
+                    if (deltaY > 0) {
+                        setPacmanDirection(0, 1); // Swipe Down
+                    } else {
+                        setPacmanDirection(0, -1); // Swipe Up
+                    }
+                }
+            }
+        }
+
+        function startGame() {
+            const input = document.getElementById("player-name-input");
+            const errorMsg = document.getElementById("name-error");
+            
+            if (!input.value.trim()) {
+                errorMsg.classList.remove("hidden");
+                return;
+            }
+
+            errorMsg.classList.add("hidden");
+            playerName = input.value.trim();
+
+            document.getElementById("display-player-name").innerText = playerName;
+            document.getElementById("screen-start").classList.add("hidden");
+            document.getElementById("screen-game").classList.remove("hidden");
+            document.getElementById("screen-game").classList.add("flex");
+
+            resetGameState();
+            gameLoop();
+        }
+
+        function resetGameState() {
+            score = 0;
+            cherriesRemaining = 5;
+            currentQuestionIndex = 0;
+            isQuestionActive = false;
+
+            pacman.x = 1;
+            pacman.y = 1;
+            pacman.dirX = 0;
+            pacman.dirY = 0;
+            pacman.nextDirX = 0;
+            pacman.nextDirY = 0;
+
+            ghosts = [
+                { id: 0, x: 13, y: 1, color: "#ef4444", dirX: 0, dirY: 1 },
+                { id: 1, x: 1, y: 13, color: "#06b6d4", dirX: 1, dirY: 0 }
+            ];
+
+            cherries = [
+                { id: 0, x: 13, y: 1, eaten: false },
+                { id: 1, x: 1, y: 13, eaten: false },
+                { id: 2, x: 13, y: 13, eaten: false },
+                { id: 3, x: 7, y: 7, eaten: false },
+                { id: 4, x: 7, y: 1, eaten: false }
+            ];
+
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById("display-score").innerText = score;
+            document.getElementById("display-cherries").innerText = cherriesRemaining;
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (isQuestionActive) return;
+            switch(e.key) {
+                case "ArrowUp":
+                case "w":
+                case "W":
+                    setPacmanDirection(0, -1);
+                    break;
+                case "ArrowDown":
+                case "s":
+                case "S":
+                    setPacmanDirection(0, 1);
+                    break;
+                case "ArrowLeft":
+                case "a":
+                case "A":
+                    setPacmanDirection(-1, 0);
+                    break;
+                case "ArrowRight":
+                case "d":
+                case "D":
+                    setPacmanDirection(1, 0);
+                    break;
+            }
+        });
+
+        function handleDpad(dir) {
+            if (isQuestionActive) return;
+            if (dir === 'UP') setPacmanDirection(0, -1);
+            if (dir === 'DOWN') setPacmanDirection(0, 1);
+            if (dir === 'LEFT') setPacmanDirection(-1, 0);
+            if (dir === 'RIGHT') setPacmanDirection(1, 0);
+        }
+
+        function setPacmanDirection(dx, dy) {
+            pacman.nextDirX = dx;
+            pacman.nextDirY = dy;
+        }
+
+        let lastPacmanMoveTime = 0;
+        let lastGhostMoveTime = 0;
+        
+        // Speed parameters specially calibrated for Special Education Students (MBPK)
+        const pacmanMoveInterval = 200; // Comfortable speed for Pacman (200ms)
+        const ghostMoveInterval  = 650; // Super slow speed for Ghosts (650ms)
+
+        function gameLoop(timestamp = 0) {
+            if (!isQuestionActive) {
+                // Move Pac-Man at a comfortable pace
+                if (timestamp - lastPacmanMoveTime > pacmanMoveInterval) {
+                    updatePacmanPosition();
+                    checkCollisions();
+                    lastPacmanMoveTime = timestamp;
+                }
+
+                // Move Ghosts SUPER SLOWLY
+                if (timestamp - lastGhostMoveTime > ghostMoveInterval) {
+                    updateGhostPositions();
+                    checkCollisions();
+                    lastGhostMoveTime = timestamp;
+                }
+
+                drawGame();
+            }
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function updatePacmanPosition() {
+            // Try turning into requested next direction
+            if (pacman.nextDirX !== 0 || pacman.nextDirY !== 0) {
+                let targetX = pacman.x + pacman.nextDirX;
+                let targetY = pacman.y + pacman.nextDirY;
+                if (map[targetY] && map[targetY][targetX] === 0) {
+                    pacman.dirX = pacman.nextDirX;
+                    pacman.dirY = pacman.nextDirY;
+                }
+            }
+
+            // Move forward if path clear
+            let nextX = pacman.x + pacman.dirX;
+            let nextY = pacman.y + pacman.dirY;
+            if (map[nextY] && map[nextY][nextX] === 0) {
+                pacman.x = nextX;
+                pacman.y = nextY;
+            }
+        }
+
+        // Super slow AI movement logic for ghosts
+        function updateGhostPositions() {
+            const directions = [
+                { x: 0, y: -1 },
+                { x: 0, y: 1 },
+                { x: -1, y: 0 },
+                { x: 1, y: 0 }
+            ];
+
+            ghosts.forEach(ghost => {
+                // Gather available open directions
+                let validDirs = [];
+                directions.forEach(d => {
+                    let testX = ghost.x + d.x;
+                    let testY = ghost.y + d.y;
+                    if (map[testY] && map[testY][testX] === 0) {
+                        // Prevent instant 180 turn unless stuck
+                        if (d.x !== -ghost.dirX || d.y !== -ghost.dirY) {
+                            validDirs.push(d);
+                        }
+                    }
+                });
+
+                if (validDirs.length > 0) {
+                    let straightValid = validDirs.some(d => d.x === ghost.dirX && d.y === ghost.dirY);
+                    if (!straightValid || Math.random() < 0.30) {
+                        let chosen = validDirs[Math.floor(Math.random() * validDirs.length)];
+                        ghost.dirX = chosen.x;
+                        ghost.dirY = chosen.y;
+                    }
+                } else {
+                    ghost.dirX = -ghost.dirX;
+                    ghost.dirY = -ghost.dirY;
+                }
+
+                // Move ghost
+                if (map[ghost.y + ghost.dirY] && map[ghost.y + ghost.dirY][ghost.x + ghost.dirX] === 0) {
+                    ghost.x += ghost.dirX;
+                    ghost.y += ghost.dirY;
+                }
+            });
+        }
+
+        function checkCollisions() {
+            // Check Ghost Collisions (Gentle reset Pacman to start if touched)
+            ghosts.forEach(ghost => {
+                if (ghost.x === pacman.x && ghost.y === pacman.y) {
+                    pacman.x = 1;
+                    pacman.y = 1;
+                    pacman.dirX = 0;
+                    pacman.dirY = 0;
+                    pacman.nextDirX = 0;
+                    pacman.nextDirY = 0;
+                }
+            });
+
+            // Check Cherry Collision -> Trigger Question!
+            cherries.forEach((cherry) => {
+                if (!cherry.eaten && cherry.x === pacman.x && cherry.y === pacman.y) {
+                    cherry.eaten = true;
+                    cherriesRemaining--;
+                    updateUI();
+                    triggerQuestion(cherry.id);
+                }
+            });
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw 15x15 Maze
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    if (map[r][c] === 1) {
+                        ctx.fillStyle = "#1e3a8a";
+                        ctx.strokeStyle = "#3b82f6";
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.roundRect(c * tileSize + 1, r * tileSize + 1, tileSize - 2, tileSize - 2, 5);
+                        ctx.fill();
+                        ctx.stroke();
+                    } else {
+                        // Path pellet dots
+                        ctx.fillStyle = "#fde047";
+                        ctx.beginPath();
+                        ctx.arc(c * tileSize + tileSize / 2, r * tileSize + tileSize / 2, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // 2. Draw 5 Cherries
+            cherries.forEach((cherry) => {
+                if (!cherry.eaten) {
+                    drawCherry(cherry.x * tileSize + tileSize / 2, cherry.y * tileSize + tileSize / 2);
+                }
+            });
+
+            // 3. Draw 2 Ghosts
+            ghosts.forEach((ghost) => {
+                drawGhost(ghost.x * tileSize + tileSize / 2, ghost.y * tileSize + tileSize / 2, ghost.color);
+            });
+
+            // 4. Draw Pac-Man
+            drawPacman(pacman.x * tileSize + tileSize / 2, pacman.y * tileSize + tileSize / 2);
+        }
+
+        function drawCherry(cx, cy) {
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Stems
+            ctx.strokeStyle = "#22c55e";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-4, -2);
+            ctx.quadraticCurveTo(-1, -11, 3, -13);
+            ctx.moveTo(4, -2);
+            ctx.quadraticCurveTo(2, -11, 3, -13);
+            ctx.stroke();
+
+            // Leaf
+            ctx.fillStyle = "#4ade80";
+            ctx.beginPath();
+            ctx.ellipse(5, -12, 4, 2, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cherry Left
+            ctx.fillStyle = "#dc2626";
+            ctx.beginPath();
+            ctx.arc(-5, 2, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cherry Right
+            ctx.beginPath();
+            ctx.arc(4, 3, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Highlights
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(-7, 0, 1.5, 0, Math.PI * 2);
+            ctx.arc(2, 1, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawPacman(cx, cy) {
+            // Animate Mouth
+            pacman.mouthAngle += pacman.mouthSpeed;
+            if (pacman.mouthAngle > 0.4 || pacman.mouthAngle < 0.05) {
+                pacman.mouthSpeed = -pacman.mouthSpeed;
+            }
+
+            let rotateAngle = 0;
+            if (pacman.dirX === 1) rotateAngle = 0;
+            if (pacman.dirX === -1) rotateAngle = Math.PI;
+            if (pacman.dirY === 1) rotateAngle = Math.PI / 2;
+            if (pacman.dirY === -1) rotateAngle = -Math.PI / 2;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rotateAngle);
+
+            ctx.fillStyle = "#facc15";
+            ctx.beginPath();
+            ctx.arc(0, 0, tileSize / 2 - 2, pacman.mouthAngle, Math.PI * 2 - pacman.mouthAngle);
+            ctx.lineTo(0, 0);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.arc(1, -tileSize / 4, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawGhost(cx, cy, color) {
+            const radius = tileSize / 2 - 2;
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Body
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, -2, radius, Math.PI, 0, false);
+            ctx.lineTo(radius, radius);
+            ctx.lineTo(radius / 2, radius - 3);
+            ctx.lineTo(0, radius);
+            ctx.lineTo(-radius / 2, radius - 3);
+            ctx.lineTo(-radius, radius);
+            ctx.closePath();
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(-4, -3, 3.5, 0, Math.PI * 2);
+            ctx.arc(4, -3, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupils
+            ctx.fillStyle = "#1e1b4b";
+            ctx.beginPath();
+            ctx.arc(-3, -3, 2, 0, Math.PI * 2);
+            ctx.arc(5, -3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function triggerQuestion(cherryId) {
+            isQuestionActive = true;
+            currentQuestionIndex = cherryId;
+            questionAttempt = 1; // Reset attempt for new question
+
+            const qData = questionsData[currentQuestionIndex];
+
+            document.getElementById("q-number").innerText = cherryId + 1;
+            document.getElementById("q-motion-title").innerText = qData.action;
+            document.getElementById("q-image-container").innerHTML = qData.svg;
+
+            // Reset Feedback & Buttons State
+            const feedbackEl = document.getElementById("q-feedback");
+            feedbackEl.innerText = "Sila pilih jawapan yang betul:";
+            feedbackEl.className = "w-full text-center text-lg sm:text-xl font-bold font-mbpk rounded-xl py-1 text-cyan-300";
+
+            enableAnswerButtons(true);
+
+            document.getElementById("question-modal").classList.remove("hidden");
+        }
+
+        function enableAnswerButtons(enable) {
+            document.getElementById("btn-lokomotor").disabled = !enable;
+            document.getElementById("btn-bukan-lokomotor").disabled = !enable;
+        }
+
+        function checkAnswer(userChoice) {
+            const qData = questionsData[currentQuestionIndex];
+            const feedbackEl = document.getElementById("q-feedback");
+
+            if (userChoice === qData.answer) {
+                // CORRECT ANSWER
+                enableAnswerButtons(false);
+
+                if (questionAttempt === 1) {
+                    score += 2; // 2 points on 1st try
+                    feedbackEl.innerText = "✨ TAHNIAH! Betul pada percubaan pertama! (+2 Markah)";
+                    feedbackEl.className = "w-full text-center text-xl font-extrabold font-mbpk rounded-xl py-2 bg-emerald-600 text-white animate-bounce";
+                } else {
+                    score += 1; // 1 point on 2nd try
+                    feedbackEl.innerText = "👍 BAGUS! Jawapan kamu betul! (+1 Markah)";
+                    feedbackEl.className = "w-full text-center text-xl font-extrabold font-mbpk rounded-xl py-2 bg-teal-600 text-white";
+                }
+
+                updateUI();
+
+                setTimeout(() => {
+                    closeQuestionModal();
+                }, 1600);
+
+            } else {
+                // INCORRECT ANSWER
+                if (questionAttempt === 1) {
+                    // Give Second Chance
+                    questionAttempt = 2;
+                    feedbackEl.innerText = "❌ JAWAPAN SALAH! Cuba sekali lagi (Peluang Kedua).";
+                    feedbackEl.className = "w-full text-center text-lg font-bold font-mbpk rounded-xl py-2 bg-amber-500 text-gray-900 animate-pulse";
+                } else {
+                    // Failed Second Chance
+                    enableAnswerButtons(false);
+                    feedbackEl.innerText = "❌ Masih Salah! (0 Markah diberikan)";
+                    feedbackEl.className = "w-full text-center text-xl font-extrabold font-mbpk rounded-xl py-2 bg-red-600 text-white";
+
+                    setTimeout(() => {
+                        closeQuestionModal();
+                    }, 1800);
+                }
+            }
+        }
+
+        function closeQuestionModal() {
+            document.getElementById("question-modal").classList.add("hidden");
+            isQuestionActive = false;
+
+            // Check if all 5 cherries are eaten
+            if (cherriesRemaining <= 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+
+            document.getElementById("screen-game").classList.add("hidden");
+            document.getElementById("screen-game").classList.remove("flex");
+
+            document.getElementById("end-player-name").innerText = playerName;
+            document.getElementById("end-player-score").innerText = score;
+
+            document.getElementById("screen-end").classList.remove("hidden");
+        }
+
+        function restartGame() {
+            document.getElementById("screen-end").classList.add("hidden");
+            document.getElementById("screen-start").classList.remove("hidden");
+            document.getElementById("player-name-input").value = "";
+        }
+    </script>
+</body>
+</html>
